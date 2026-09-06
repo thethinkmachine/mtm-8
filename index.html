@@ -1,0 +1,612 @@
+<title>MTM-5 Assembler</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --paper:#eef0f4; --surface:#ffffff; --sunk:#e5e8ee;
+    --ink:#14181f; --muted:#5a6272; --faint:#8b93a3;
+    --rule:#d6dae2; --rule-hard:#b9c0cc;
+    --gold:#b8890b; --gold-soft:#f7edd0; --gold-line:#e0c56a;
+    --ok:#1f7a4d; --ok-soft:#e2f2e9;
+    --err:#b3261e; --err-soft:#fbe6e4;
+    --shadow:0 1px 2px rgba(20,24,31,.06), 0 8px 24px -12px rgba(20,24,31,.18);
+    --mono:"IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+    --sans:"Archivo", ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+    --display:"Archivo Black", "Archivo", ui-sans-serif, system-ui, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper:#0f1319; --surface:#161b23; --sunk:#11161d;
+      --ink:#e4e8ef; --muted:#98a1b2; --faint:#6d778a;
+      --rule:#262d38; --rule-hard:#37404e;
+      --gold:#e8b93a; --gold-soft:#2a2312; --gold-line:#6b551d;
+      --ok:#4fb488; --ok-soft:#14261f;
+      --err:#e5645b; --err-soft:#2b1715;
+      --shadow:0 1px 2px rgba(0,0,0,.5), 0 10px 30px -14px rgba(0,0,0,.7);
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper:#0f1319; --surface:#161b23; --sunk:#11161d;
+    --ink:#e4e8ef; --muted:#98a1b2; --faint:#6d778a;
+    --rule:#262d38; --rule-hard:#37404e;
+    --gold:#e8b93a; --gold-soft:#2a2312; --gold-line:#6b551d;
+    --ok:#4fb488; --ok-soft:#14261f;
+    --err:#e5645b; --err-soft:#2b1715;
+    --shadow:0 1px 2px rgba(0,0,0,.5), 0 10px 30px -14px rgba(0,0,0,.7);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font-family: var(--sans); font-size: 15px; line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 28px 22px 72px; }
+
+  /* ── masthead ─────────────────────────────────────────── */
+  header.top {
+    display: flex; flex-wrap: wrap; align-items: flex-end; gap: 18px 26px;
+    padding-bottom: 18px; border-bottom: 2px solid var(--ink); margin-bottom: 26px;
+  }
+  .lockup { display: flex; flex-direction: column; gap: 2px; }
+  h1 {
+    font-family: var(--display); font-size: clamp(28px, 4.6vw, 44px);
+    letter-spacing: -.025em; line-height: .96; margin: 0; text-wrap: balance;
+  }
+  h1 .five { color: var(--gold); }
+  .kicker {
+    font-family: var(--mono); font-size: 11px; font-weight: 500;
+    letter-spacing: .16em; text-transform: uppercase; color: var(--muted);
+  }
+  .spec {
+    margin-left: auto; display: grid; grid-template-columns: repeat(4, auto);
+    gap: 2px 22px; font-family: var(--mono); font-size: 12px;
+  }
+  .spec dt { color: var(--faint); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; }
+  .spec dd { margin: 0; font-weight: 500; font-variant-numeric: tabular-nums; }
+
+  /* ── workbench ────────────────────────────────────────── */
+  .bench { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
+  @media (max-width: 880px) { .bench { grid-template-columns: 1fr; } }
+
+  .pane {
+    background: var(--surface); border: 1px solid var(--rule);
+    border-radius: 4px; box-shadow: var(--shadow); overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  .pane-head {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 12px; border-bottom: 1px solid var(--rule); background: var(--sunk);
+  }
+  .pane-head h2 {
+    margin: 0; font-family: var(--mono); font-size: 11px; font-weight: 600;
+    letter-spacing: .14em; text-transform: uppercase; color: var(--muted);
+  }
+  .arrow { color: var(--gold); font-family: var(--mono); font-size: 12px; }
+  .pane-head .right { margin-left: auto; display: flex; gap: 6px; }
+
+  .editor { display: grid; grid-template-columns: auto 1fr; font-family: var(--mono); font-size: 13.5px; }
+  .gutter {
+    padding: 12px 8px 12px 12px; text-align: right; color: var(--faint);
+    background: var(--surface); border-right: 1px solid var(--rule);
+    user-select: none; font-variant-numeric: tabular-nums; line-height: 1.62;
+    white-space: pre; overflow: hidden;
+  }
+  .gutter b { color: var(--err); font-weight: 600; }
+  textarea {
+    font: inherit; line-height: 1.62; color: var(--ink); background: var(--surface);
+    border: 0; resize: vertical; padding: 12px 12px 12px 10px; min-height: 300px;
+    outline: none; tab-size: 8; white-space: pre; overflow-wrap: normal; overflow-x: auto;
+  }
+  textarea:focus-visible { box-shadow: inset 3px 0 0 var(--gold); }
+  textarea::placeholder { color: var(--faint); }
+
+  /* ── buttons ──────────────────────────────────────────── */
+  button {
+    font-family: var(--mono); font-size: 11px; font-weight: 500; letter-spacing: .06em;
+    color: var(--muted); background: var(--surface); border: 1px solid var(--rule-hard);
+    border-radius: 3px; padding: 4px 9px; cursor: pointer;
+  }
+  button:hover { color: var(--ink); border-color: var(--ink); }
+  button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  button.on { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+
+  /* ── status ───────────────────────────────────────────── */
+  .status {
+    display: flex; align-items: baseline; gap: 10px; padding: 9px 12px;
+    border-top: 1px solid var(--rule); font-family: var(--mono); font-size: 12px;
+    background: var(--ok-soft); color: var(--ok);
+  }
+  .status.bad { background: var(--err-soft); color: var(--err); }
+  .status .lineno {
+    flex: none; font-weight: 600; padding: 0 5px; border-radius: 2px;
+    background: var(--err); color: var(--surface); font-size: 11px;
+  }
+  .status .msg { color: var(--ink); }
+  .status.bad .msg { color: var(--err); }
+
+  /* ── the tape ─────────────────────────────────────────── */
+  .tape-out {
+    font-family: var(--mono); font-size: 13px; line-height: 1.7; padding: 12px;
+    word-break: break-all; color: var(--ink); background: var(--surface);
+    min-height: 300px; border: 0; width: 100%; resize: vertical; outline: none;
+  }
+  .tape-out:focus-visible { box-shadow: inset 3px 0 0 var(--gold); }
+
+  section.strip-sec { margin-top: 30px; }
+  .sec-head {
+    display: flex; align-items: baseline; gap: 12px; margin-bottom: 12px;
+    padding-bottom: 7px; border-bottom: 1px solid var(--rule);
+  }
+  .sec-head h2 {
+    margin: 0; font-family: var(--mono); font-size: 11px; font-weight: 600;
+    letter-spacing: .14em; text-transform: uppercase; color: var(--muted);
+  }
+  .sec-head .note { font-size: 12.5px; color: var(--faint); }
+
+  .strip {
+    display: flex; gap: 0; overflow-x: auto; padding: 4px 0 12px;
+    scrollbar-width: thin;
+  }
+  .cell {
+    flex: none; min-width: 74px; background: var(--surface);
+    border: 1px solid var(--rule); border-left-width: 0;
+    padding: 7px 9px 8px; display: flex; flex-direction: column; gap: 1px;
+  }
+  .cell:first-child { border-left-width: 1px; border-radius: 3px 0 0 3px; }
+  .cell:last-child { border-radius: 0 3px 3px 0; }
+  .cell .pc {
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em;
+    color: var(--faint); font-variant-numeric: tabular-nums;
+  }
+  .cell .mn { font-family: var(--mono); font-size: 14px; font-weight: 600; color: var(--ink); }
+  .cell .bits {
+    font-family: var(--mono); font-size: 10.5px; color: var(--gold);
+    letter-spacing: .02em; white-space: nowrap;
+  }
+  .cell.head { background: var(--gold-soft); border-color: var(--gold-line); }
+  .cell.head .mn { color: var(--gold); }
+  .cell.head .bits { color: var(--muted); }
+  .cell.halt { background: var(--sunk); }
+  .cell.flow { box-shadow: inset 0 -3px 0 var(--gold); }
+  .cell.target { box-shadow: inset 3px 0 0 var(--ok); }
+
+  /* ── reference ────────────────────────────────────────── */
+  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(272px, 1fr)); gap: 22px 30px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  caption {
+    text-align: left; font-family: var(--mono); font-size: 10.5px; font-weight: 600;
+    letter-spacing: .13em; text-transform: uppercase; color: var(--gold);
+    padding-bottom: 5px; margin-bottom: 5px; border-bottom: 1px solid var(--gold-line);
+  }
+  th, td { text-align: left; padding: 4px 8px 4px 0; vertical-align: baseline; }
+  thead th {
+    font-family: var(--mono); font-size: 10px; font-weight: 500; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--faint); border-bottom: 1px solid var(--rule);
+    padding-bottom: 4px;
+  }
+  tbody tr + tr td { border-top: 1px solid var(--rule); }
+  td.op { font-family: var(--mono); font-weight: 600; color: var(--gold); width: 1%; }
+  td.mn { font-family: var(--mono); font-weight: 500; white-space: nowrap; }
+  td.fx { color: var(--muted); }
+  td.fx code { font-family: var(--mono); font-size: 12px; color: var(--ink); }
+
+  .examples { display: flex; flex-wrap: wrap; gap: 7px; }
+  .examples button { padding: 5px 11px; font-size: 11.5px; }
+
+  .prose { max-width: 66ch; color: var(--muted); font-size: 14px; }
+  .prose p { margin: 0 0 10px; }
+  .prose strong { color: var(--ink); font-weight: 600; }
+  .prose code {
+    font-family: var(--mono); font-size: 12.5px; background: var(--sunk);
+    padding: 1px 4px; border-radius: 2px; color: var(--ink);
+  }
+  ul.gotchas { margin: 0; padding-left: 17px; color: var(--muted); font-size: 14px; }
+  ul.gotchas li { margin-bottom: 6px; }
+  ul.gotchas code {
+    font-family: var(--mono); font-size: 12.5px; color: var(--ink);
+    background: var(--sunk); padding: 1px 4px; border-radius: 2px;
+  }
+  footer {
+    margin-top: 44px; padding-top: 14px; border-top: 1px solid var(--rule);
+    font-family: var(--mono); font-size: 11.5px; color: var(--faint);
+    display: flex; flex-wrap: wrap; gap: 6px 20px;
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="lockup">
+      <span class="kicker">8-tape accumulator CPU &middot; mtm-cpu.automaton</span>
+      <h1>MTM<span class="five">&ndash;5</span> Assembler</h1>
+    </div>
+    <dl class="spec">
+      <div><dt>Word</dt><dd>5 bit</dd></div>
+      <div><dt>RAM</dt><dd>32 words</dd></div>
+      <div><dt>Opcodes</dt><dd>19</dd></div>
+      <div><dt>Registers</dt><dd>A, X</dd></div>
+    </dl>
+  </header>
+
+  <div class="bench">
+    <div class="pane">
+      <div class="pane-head">
+        <h2>Assembly</h2><span class="arrow" id="dir-l">&rarr;</span>
+        <div class="right"><button id="copy-src" type="button">Copy</button></div>
+      </div>
+      <div class="editor">
+        <div class="gutter" id="gutter">1</div>
+        <textarea id="src" spellcheck="false" autocapitalize="off" autocorrect="off"
+          aria-label="Assembly source"></textarea>
+      </div>
+      <div class="status" id="status"><span class="msg">Ready.</span></div>
+    </div>
+
+    <div class="pane">
+      <div class="pane-head">
+        <span class="arrow" id="dir-r">&larr;</span><h2>Tape</h2>
+        <div class="right"><button id="copy-tape" type="button">Copy</button></div>
+      </div>
+      <textarea class="tape-out" id="tape" spellcheck="false" autocapitalize="off"
+        autocorrect="off" aria-label="Encoded tape"></textarea>
+      <div class="status" id="tstatus"><span class="msg">&nbsp;</span></div>
+    </div>
+  </div>
+
+  <section class="strip-sec">
+    <div class="sec-head">
+      <h2>Tape strip</h2>
+      <span class="note">One cell per instruction. Gold underline marks a control transfer;
+        green edge marks a jump target.</span>
+    </div>
+    <div class="strip" id="strip"></div>
+  </section>
+
+  <section class="strip-sec">
+    <div class="sec-head"><h2>Programs</h2><span class="note">Load one, then edit it.</span></div>
+    <div class="examples" id="examples"></div>
+  </section>
+
+  <section class="strip-sec">
+    <div class="sec-head"><h2>Instruction set</h2></div>
+    <div class="cols">
+      <table>
+        <caption>Arithmetic &amp; logic &mdash; 5-bit immediate</caption>
+        <thead><tr><th>Op</th><th>Mnemonic</th><th>Effect</th></tr></thead>
+        <tbody>
+          <tr><td class="op">A</td><td class="mn">ADD n</td><td class="fx"><code>A = A + n</code></td></tr>
+          <tr><td class="op">S</td><td class="mn">SUB n</td><td class="fx"><code>A = A &minus; n</code></td></tr>
+          <tr><td class="op">N</td><td class="mn">AND n</td><td class="fx"><code>A = A &amp; n</code></td></tr>
+          <tr><td class="op">O</td><td class="mn">ORA n</td><td class="fx"><code>A = A | n</code></td></tr>
+          <tr><td class="op">X</td><td class="mn">EOR n</td><td class="fx"><code>A = A ^ n</code></td></tr>
+          <tr><td class="op">C</td><td class="mn">CMP n</td><td class="fx">flag set if <code>A &ge; n</code></td></tr>
+        </tbody>
+      </table>
+      <table>
+        <caption>Memory &amp; index</caption>
+        <thead><tr><th>Op</th><th>Mnemonic</th><th>Effect</th></tr></thead>
+        <tbody>
+          <tr><td class="op">L</td><td class="mn">LDA addr</td><td class="fx"><code>A = RAM[addr]</code></td></tr>
+          <tr><td class="op">T</td><td class="mn">STA addr</td><td class="fx"><code>RAM[addr] = A</code></td></tr>
+          <tr><td class="op">U</td><td class="mn">TAX</td><td class="fx"><code>X = A</code></td></tr>
+          <tr><td class="op">V</td><td class="mn">TXA</td><td class="fx"><code>A = X</code></td></tr>
+          <tr><td class="op">E</td><td class="mn">STX</td><td class="fx"><code>RAM[X] = A</code></td></tr>
+          <tr><td class="op">D</td><td class="mn">LDX</td><td class="fx"><code>A = RAM[X]</code></td></tr>
+        </tbody>
+      </table>
+      <table>
+        <caption>Control flow</caption>
+        <thead><tr><th>Op</th><th>Mnemonic</th><th>Effect</th></tr></thead>
+        <tbody>
+          <tr><td class="op">J</td><td class="mn">BCS d</td><td class="fx">skip d ahead if flag set</td></tr>
+          <tr><td class="op">M</td><td class="mn">SKP d</td><td class="fx">skip d ahead, always</td></tr>
+          <tr><td class="op">P</td><td class="mn">JMP n</td><td class="fx">go to instruction n</td></tr>
+          <tr><td class="op">K</td><td class="mn">JSR n</td><td class="fx">call instruction n</td></tr>
+          <tr><td class="op">R</td><td class="mn">RTS</td><td class="fx">return</td></tr>
+          <tr><td class="op">W</td><td class="mn">JMPX</td><td class="fx">go to instruction X</td></tr>
+          <tr><td class="op">!</td><td class="mn">HLT</td><td class="fx">halt &mdash; the accepting state</td></tr>
+        </tbody>
+      </table>
+      <div>
+        <table><caption>Reading a tape</caption></table>
+        <div class="prose">
+          <p>A program is <code>^flag#seed#</code> then instructions, ending <code>!</code>.
+            <strong>flag</strong> is <code>f</code> or <code>g</code>; <strong>seed</strong> is
+            the 5-bit starting accumulator. Every operand carries a
+            <strong>trailing <code>#</code></strong>.</p>
+          <p>Directives: <code>.acc n</code>, <code>.flag f|g</code>.
+            <code>;</code> starts a comment, <code>label:</code> marks an instruction.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="strip-sec">
+    <div class="sec-head"><h2>What will catch you</h2></div>
+    <ul class="gotchas">
+      <li><code>BCS</code> and <code>SKP</code> only jump <strong>forward</strong>, at most 9
+        instructions. Every loop is a short forward branch to the exit plus a backward
+        <code>JMP</code> to the top.</li>
+      <li><code>CMP</code> is <strong>&ge;</strong>, not <code>==</code> &mdash; it is the carry
+        after a compare, as on a 6502. A loop waiting for equality overshoots when the step
+        does not divide the target.</li>
+      <li>Words wrap at 32: <code>ADD 5</code> on 30 gives 3.</li>
+      <li><code>RTS</code> with an empty stack halts, and a jump past the last instruction
+        halts. Neither faults.</li>
+      <li>Instruction numbers count <strong>instructions</strong> from 0, not characters.</li>
+    </ul>
+  </section>
+
+  <footer>
+    <span>Paste a tape into the app's run box with <b>mtm-cpu.automaton</b> open.</span>
+    <span>Closest counterpart: a 5-bit MOS 6502.</span>
+  </footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* Operand widths differ by group, which is most of what this hides: the ALU
+     and memory ops take 5 bits, JMP/JSR take 8, the index ops take a literal 0,
+     and the two relative branches take a single decimal digit. */
+  var OPS = {
+    ADD:{c:"A",k:"imm5"}, SUB:{c:"S",k:"imm5"}, AND:{c:"N",k:"imm5"},
+    ORA:{c:"O",k:"imm5"}, EOR:{c:"X",k:"imm5"}, CMP:{c:"C",k:"imm5"},
+    LDA:{c:"L",k:"addr5"}, STA:{c:"T",k:"addr5"},
+    TAX:{c:"U",k:"zero"}, TXA:{c:"V",k:"zero"}, STX:{c:"E",k:"zero"},
+    LDX:{c:"D",k:"zero"}, JMPX:{c:"W",k:"zero"}, RTS:{c:"R",k:"zero"},
+    BCS:{c:"J",k:"rel"}, SKP:{c:"M",k:"rel"},
+    JMP:{c:"P",k:"abs8"}, JSR:{c:"K",k:"abs8"},
+    HLT:{c:"!",k:"none"}
+  };
+  var BY_CODE = {};
+  Object.keys(OPS).forEach(function (m) { BY_CODE[OPS[m].c] = { m: m, k: OPS[m].k }; });
+
+  function bin(n, w) { return (((n % (1 << w)) + (1 << w)) % (1 << w)).toString(2).padStart(w, "0"); }
+
+  function AsmError(msg, line) { this.message = msg; this.line = line || 0; }
+  function fail(line, msg) { throw new AsmError(msg, line); }
+
+  function num(tok, line) {
+    if (tok === undefined) fail(line, "expected a number");
+    if (!/^(0[bB][01]+|0[xX][0-9a-fA-F]+|-?\d+)$/.test(tok.trim())) fail(line, '"' + tok + '" is not a number');
+    return Number(tok.replace(/^0[bB]/, "0b"));
+  }
+
+  function assemble(src) {
+    var acc = 0, flag = "f", rows = [], labels = {};
+    src.split(/\r?\n/).forEach(function (raw, i) {
+      var line = i + 1, text = raw.replace(/;.*$/, "").trim();
+      if (!text) return;
+      var lab = /^([A-Za-z_]\w*)\s*:\s*/.exec(text);
+      if (lab) {
+        if (Object.prototype.hasOwnProperty.call(labels, lab[1])) fail(line, 'duplicate label "' + lab[1] + '"');
+        labels[lab[1]] = rows.length;
+        text = text.slice(lab[0].length).trim();
+        if (!text) return;
+      }
+      var parts = text.split(/[\s,]+/), head = parts[0], args = parts.slice(1);
+      var dir = head.toLowerCase();
+      if (dir === ".acc") { acc = num(args[0], line); return; }
+      if (dir === ".flag") {
+        var f = (args[0] || "").toLowerCase();
+        if (f !== "f" && f !== "g") fail(line, '.flag takes f or g, got "' + (args[0] || "") + '"');
+        flag = f; return;
+      }
+      if (dir.charAt(0) === ".") fail(line, 'unknown directive "' + head + '"');
+      var mn = head.toUpperCase();
+      if (!OPS[mn]) fail(line, 'unknown mnemonic "' + head + '"');
+      if (args.length > 1) fail(line, mn + " takes at most one operand");
+      rows.push({ mn: mn, arg: args[0], line: line });
+    });
+    if (!rows.length || rows[rows.length - 1].mn !== "HLT") rows.push({ mn: "HLT", line: 0 });
+
+    var cells = [{ head: true, mn: "^" + flag, bits: bin(acc, 5), text: "^" + flag + "#" + bin(acc, 5) + "#" }];
+    rows.forEach(function (r, pc) {
+      var op = OPS[r.mn], c = op.c, k = op.k, text, bits = "";
+      if (k === "none") { text = "!"; }
+      else if (k === "zero") {
+        if (r.arg !== undefined) fail(r.line, r.mn + " takes no operand");
+        text = c + "#0#"; bits = "0";
+      } else {
+        if (r.arg === undefined) fail(r.line, r.mn + " needs an operand");
+        if (k === "imm5") { bits = bin(num(r.arg, r.line), 5); text = c + "#" + bits + "#"; }
+        else if (k === "addr5") {
+          var a = num(r.arg, r.line);
+          if (a < 0 || a > 31) fail(r.line, "address " + a + " is outside RAM (0..31)");
+          bits = bin(a, 5); text = c + "#" + bits + "#";
+        } else {
+          var t = Object.prototype.hasOwnProperty.call(labels, r.arg)
+            ? labels[r.arg]
+            : (/^[A-Za-z_]/.test(r.arg) ? fail(r.line, 'unknown label "' + r.arg + '"') : num(r.arg, r.line));
+          if (k === "abs8") {
+            if (t < 0 || t > 255) fail(r.line, "target " + t + " is outside 0..255");
+            bits = bin(t, 8); text = c + "#" + bits + "#";
+          } else {
+            var skip = Object.prototype.hasOwnProperty.call(labels, r.arg) ? t - (pc + 1) : t;
+            if (skip < 0) fail(r.line, r.mn + " cannot branch backwards (" + (-skip) + " before it) — use JMP");
+            if (skip > 9) fail(r.line, r.mn + " skips at most 9, needs " + skip + " — use JMP");
+            bits = String(skip); text = c + "#" + skip + "#";
+          }
+        }
+      }
+      cells.push({ pc: pc, mn: r.mn, arg: r.arg, bits: bits, text: text, kind: k });
+    });
+    return { tape: cells.map(function (x) { return x.text; }).join(""), cells: cells };
+  }
+
+  function disassemble(tape) {
+    var m = /^\^([fg])#([01]{5})#(.*)!$/.exec(tape.trim());
+    if (!m) throw new AsmError("not a program — expected ^flag#seed#…!", 0);
+    var flag = m[1], seed = m[2], body = m[3], rows = [], i = 0;
+    while (i < body.length) {
+      var op = BY_CODE[body.charAt(i)];
+      if (!op) throw new AsmError('unknown opcode "' + body.charAt(i) + '" at position ' + i, 0);
+      i++;
+      if (body.charAt(i) !== "#") throw new AsmError("expected # after " + op.m, 0);
+      i++;
+      var end = body.indexOf("#", i);
+      if (end < 0) throw new AsmError("unterminated operand for " + op.m, 0);
+      var field = body.slice(i, end); i = end + 1;
+      rows.push(op.k === "zero" ? [op.m]
+        : op.k === "rel" ? [op.m, Number(field)]
+        : [op.m, parseInt(field, 2)]);
+    }
+    rows.push(["HLT"]);          /* the '!' the header pattern consumed is a real instruction */
+
+    var named = {}, n = 0;
+    rows.forEach(function (r, pc) {
+      var k = OPS[r[0]].k;
+      var t = k === "abs8" ? r[1] : k === "rel" ? pc + 1 + r[1] : null;
+      if (t !== null && t >= 0 && t < rows.length && !named[t]) named[t] = "L" + (n++);
+    });
+    var out = ["        .flag " + flag, "        .acc " + parseInt(seed, 2), ""];
+    rows.forEach(function (r, pc) {
+      var k = OPS[r[0]].k;
+      var ref = k === "abs8" ? named[r[1]] : k === "rel" ? named[pc + 1 + r[1]] : null;
+      var operand = r[1] === undefined ? "" : " " + (ref || r[1]);
+      var lhs = (named[pc] ? named[pc] + ":" : "");
+      var body2 = pad(lhs, 8) + r[0] + operand;
+      out.push(pad(body2, 26) + "; " + pc);
+    });
+    return out.join("\n");
+  }
+  function pad(s, n) { while (s.length < n) s += " "; return s; }
+
+  /* ── wiring ───────────────────────────────────────────── */
+  var $ = function (id) { return document.getElementById(id); };
+  var src = $("src"), tape = $("tape"), strip = $("strip"),
+      status = $("status"), tstatus = $("tstatus"),
+      gutter = $("gutter"), dirL = $("dir-l"), dirR = $("dir-r");
+  var quiet = false;
+
+  function setStatus(el, ok, msg, line) {
+    el.className = "status" + (ok ? "" : " bad");
+    el.textContent = "";
+    if (!ok && line) {
+      var b = document.createElement("span");
+      b.className = "lineno"; b.textContent = "line " + line;
+      el.appendChild(b);
+    }
+    var s = document.createElement("span");
+    s.className = "msg"; s.textContent = msg;
+    el.appendChild(s);
+  }
+
+  function drawGutter(text, errLine) {
+    var n = text.split("\n").length, out = [];
+    for (var i = 1; i <= n; i++) out.push(i === errLine ? "<b>" + i + "</b>" : String(i));
+    gutter.innerHTML = out.join("\n");
+  }
+
+  function drawStrip(cells) {
+    strip.textContent = "";
+    if (!cells) return;
+    var targets = {};
+    cells.forEach(function (c) {
+      if (c.kind === "abs8") targets[Number(parseInt(c.bits, 2))] = 1;
+      else if (c.kind === "rel") targets[c.pc + 1 + Number(c.bits)] = 1;
+    });
+    cells.forEach(function (c) {
+      var d = document.createElement("div");
+      d.className = "cell" + (c.head ? " head" : "")
+        + (c.mn === "HLT" ? " halt" : "")
+        + (c.kind === "abs8" || c.kind === "rel" ? " flow" : "")
+        + (!c.head && targets[c.pc] ? " target" : "");
+      var pc = document.createElement("span");
+      pc.className = "pc"; pc.textContent = c.head ? "HDR" : String(c.pc);
+      var mn = document.createElement("span");
+      mn.className = "mn"; mn.textContent = c.head ? "^" + c.mn.slice(1) : c.mn;
+      var bits = document.createElement("span");
+      bits.className = "bits";
+      bits.textContent = c.head ? "A=" + parseInt(c.bits, 2) : (c.bits || "—");
+      d.appendChild(pc); d.appendChild(mn); d.appendChild(bits);
+      d.title = c.text;
+      strip.appendChild(d);
+    });
+  }
+
+  function fromSource() {
+    if (quiet) return;
+    dirL.textContent = "→"; dirR.textContent = "→";
+    var r;
+    try { r = assemble(src.value); }
+    catch (e) {
+      drawGutter(src.value, e.line);
+      setStatus(status, false, e.message, e.line);
+      setStatus(tstatus, false, "not assembled", 0);
+      return;
+    }
+    drawGutter(src.value, 0);
+    quiet = true; tape.value = r.tape; quiet = false;
+    var count = r.cells.length - 1;
+    setStatus(status, true, count + (count === 1 ? " instruction" : " instructions") + ", assembled.");
+    setStatus(tstatus, true, r.tape.length + " tape symbols.");
+    drawStrip(r.cells);
+  }
+
+  function fromTape() {
+    if (quiet) return;
+    dirL.textContent = "←"; dirR.textContent = "←";
+    var text;
+    try { text = disassemble(tape.value); }
+    catch (e) {
+      setStatus(tstatus, false, e.message, 0);
+      setStatus(status, false, "not disassembled", 0);
+      return;
+    }
+    quiet = true; src.value = text; quiet = false;
+    drawGutter(text, 0);
+    setStatus(tstatus, true, tape.value.trim().length + " tape symbols, disassembled.");
+    /* re-assemble so the strip and the instruction count come from one path */
+    try {
+      var r = assemble(text);
+      var count = r.cells.length - 1;
+      setStatus(status, true, count + (count === 1 ? " instruction" : " instructions") + ".");
+      drawStrip(r.cells);
+    } catch (e2) { setStatus(status, false, e2.message, e2.line); }
+  }
+
+  src.addEventListener("input", fromSource);
+  tape.addEventListener("input", fromTape);
+  src.addEventListener("scroll", function () { gutter.scrollTop = src.scrollTop; });
+
+  function copy(btn, get) {
+    btn.addEventListener("click", function () {
+      var text = get();
+      var done = function () { var o = btn.textContent; btn.textContent = "Copied"; setTimeout(function () { btn.textContent = o; }, 1100); };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, done);
+      else done();
+    });
+  }
+  copy($("copy-src"), function () { return src.value; });
+  copy($("copy-tape"), function () { return tape.value; });
+
+  var EXAMPLES = [
+    ["Count to 3", "        .acc 0\nloop:   ADD 1\n        CMP 3\n        BCS done\n        JMP loop\ndone:   HLT"],
+    ["4 × 3 by addition", "        .acc 0\nloop:   ADD 4\n        CMP 12\n        BCS done\n        JMP loop\ndone:   HLT"],
+    ["Subroutine", "        .acc 0\n        ADD 1\n        JSR sub\n        ADD 1\n        SKP 2\nsub:    ADD 10\n        RTS\n        HLT"],
+    ["X-indexed memory", "        .acc 7\n        TAX\n        STX\n        AND 0\n        LDX\n        HLT"],
+    ["Sum 1..5", "        .acc 0\n        ADD 1\n        ADD 2\n        ADD 3\n        ADD 4\n        ADD 5\n        HLT"],
+    ["Bitwise", "        .acc 12\n        AND 10\n        ORA 5\n        EOR 3\n        HLT"]
+  ];
+  var ex = $("examples");
+  EXAMPLES.forEach(function (e, i) {
+    var b = document.createElement("button");
+    b.type = "button"; b.textContent = e[0];
+    b.addEventListener("click", function () {
+      [].forEach.call(ex.children, function (c) { c.className = ""; });
+      b.className = "on";
+      src.value = e[1]; fromSource(); src.focus();
+    });
+    if (i === 0) b.className = "on";
+    ex.appendChild(b);
+  });
+
+  src.value = EXAMPLES[0][1];
+  fromSource();
+})();
+</script>
