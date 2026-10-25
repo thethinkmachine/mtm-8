@@ -1,4 +1,4 @@
-<title>MTM-5 Assembler</title>
+<title>MTM-8 Assembler</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
@@ -192,6 +192,28 @@
   td.fx { color: var(--muted); }
   td.fx code { font-family: var(--mono); font-size: 12px; color: var(--ink); }
 
+  /* ── run it ───────────────────────────────────────────── */
+  .run { display: grid; grid-template-columns: auto 1fr; gap: 16px 30px; align-items: start; }
+  @media (max-width: 720px) { .run { grid-template-columns: 1fr; } }
+  .run-links { display: flex; flex-direction: column; gap: 8px; min-width: 230px; }
+  a.btn {
+    display: flex; align-items: baseline; gap: 8px; text-decoration: none;
+    font-family: var(--mono); font-size: 12px; font-weight: 500; letter-spacing: .04em;
+    color: var(--ink); background: var(--surface); border: 1px solid var(--rule-hard);
+    border-radius: 3px; padding: 8px 12px;
+  }
+  a.btn:hover { border-color: var(--ink); }
+  a.btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  a.btn.primary { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+  a.btn .sub { margin-left: auto; color: var(--faint); font-size: 10.5px; }
+  a.btn.primary .sub { color: var(--rule-hard); }
+  .run-alt { font-family: var(--mono); font-size: 11px; color: var(--faint); }
+  .run-alt a { color: var(--muted); }
+  ol.steps { margin: 0; padding-left: 20px; color: var(--muted); font-size: 14px; max-width: 66ch; }
+  ol.steps li { margin-bottom: 6px; padding-left: 2px; }
+  ol.steps li::marker { font-family: var(--mono); font-size: 12px; color: var(--gold); }
+  ol.steps strong { color: var(--ink); font-weight: 600; }
+
   .examples { display: flex; flex-wrap: wrap; gap: 7px; }
   .examples button { padding: 5px 11px; font-size: 11.5px; }
 
@@ -213,6 +235,7 @@
     font-family: var(--mono); font-size: 11.5px; color: var(--faint);
     display: flex; flex-wrap: wrap; gap: 6px 20px;
   }
+  footer a { color: var(--muted); }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
 
@@ -220,7 +243,7 @@
   <header class="top">
     <div class="lockup">
       <span class="kicker">8-tape accumulator CPU &middot; mtm-cpu.automaton</span>
-      <h1>MTM<span class="five">&ndash;5</span> Assembler</h1>
+      <h1>MTM<span class="five">&ndash;8</span> Assembler</h1>
     </div>
     <dl class="spec">
       <div><dt>Word</dt><dd>5 bit</dd></div>
@@ -254,6 +277,24 @@
       <div class="status" id="tstatus"><span class="msg">&nbsp;</span></div>
     </div>
   </div>
+
+  <section class="strip-sec">
+    <div class="sec-head"><h2>Run it</h2><span class="note">The CPU is a Turing machine; AutomataStudio simulates it.</span></div>
+    <div class="run">
+      <div class="run-links">
+        <a class="btn primary" href="automaton/mtm-cpu.automaton" download>Download mtm-cpu.automaton<span class="sub">10 MB</span></a>
+        <a class="btn" href="https://automatastudio.pages.dev/" target="_blank" rel="noopener">Open AutomataStudio<span class="sub">&nearr;</span></a>
+        <span class="run-alt">or get an <a href="https://github.com/thethinkmachine/AutomataStudio" target="_blank" rel="noopener">offline copy</a> from GitHub</span>
+      </div>
+      <ol class="steps">
+        <li><strong>Download</strong> the automaton file and <strong>open AutomataStudio</strong>.</li>
+        <li><strong>Drag the file</strong> into AutomataStudio to load the machine.</li>
+        <li><strong>Write a program</strong> above, or load one from <em>Programs</em> below, then <strong>Copy</strong> the tape.</li>
+        <li>In AutomataStudio, paste the tape into <strong>Simulate String</strong> and press <strong>Play</strong>.</li>
+        <li>When it halts, read the result off the tapes: <strong>tape 2</strong> is the accumulator, <strong>tape 5</strong> is RAM.</li>
+      </ol>
+    </div>
+  </section>
 
   <section class="strip-sec">
     <div class="sec-head">
@@ -340,7 +381,7 @@
   </section>
 
   <footer>
-    <span>Paste a tape into the app's run box with <b>mtm-cpu.automaton</b> open.</span>
+    <span>Run tapes in <a href="https://automatastudio.pages.dev/" target="_blank" rel="noopener">AutomataStudio</a> with <a href="automaton/mtm-cpu.automaton" download>mtm-cpu.automaton</a> loaded.</span>
     <span>Closest counterpart: a 5-bit MOS 6502.</span>
   </footer>
 </div>

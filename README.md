@@ -197,13 +197,19 @@ Directives are `.acc n` (initial accumulator) and `.flag f|g`; `;` starts a comm
 
 ## How to run
 
+| | |
+|---|---|
+| Automaton | [Download `mtm-cpu.automaton`](https://thethinkmachine.github.io/mtm-8/automaton/mtm-cpu.automaton) (10 MB) |
+| AutomataStudio | [Open in the browser](https://automatastudio.pages.dev/), or get an [offline copy](https://github.com/thethinkmachine/AutomataStudio) |
+| Assembler | [Web assembler](https://thethinkmachine.github.io/mtm-8/), or `mtm-cpu-asm.mjs` below |
+
 The complete process is straightforward:
 
 1. **Load the automaton.**
-   Open **Automata Studio** and load the `mtm-cpu.automaton` file into the application.
+   Download `mtm-cpu.automaton`, open [AutomataStudio](https://automatastudio.pages.dev/), and drag the file into it.
 
 2. **Write your program.**
-   Open `mtm-cpu-asm.mjs` and write your program using the assembly language defined in this specification. Follow the machine's ISA, operand formats, directives, and control-flow rules described above.
+   Write it in a `.s` file (or straight into the [web assembler](https://thethinkmachine.github.io/mtm-8/)) using the assembly language defined in this specification. Follow the machine's ISA, operand formats, directives, and control-flow rules described above.
 
    For example:
 
