@@ -271,3 +271,7 @@ Inspect the result below the simulation
 ```
 
 The important distinction is that **you never manually construct the machine's tape encoding**. Write the program in the provided assembly language, let `mtm-cpu-asm.mjs` assemble it (or use the web based interface), and use the resulting tape string as the input to `mtm-cpu.automaton`.
+
+---
+
+Made by [Shreyan Chaubey](https://github.com/thethinkmachine). Released under the [MIT License](LICENSE).
